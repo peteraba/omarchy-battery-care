@@ -1,0 +1,91 @@
+#!/bin/bash
+# omarchy:summary=Control Lenovo battery charge modes (conservation cap / charge type)
+# omarchy:args=<on|off|toggle|status|get-type|set-type <Fast|Standard|Long_Life>>
+# Root-owned helper invoked via passwordless sudo by the pixeltux.battery shell plugin.
+
+NODE="/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode"
+CHARGE_TYPES_FILE="/sys/class/power_supply/BAT1/charge_types"
+
+usage() {
+  echo "Usage: ${0##*/} <on|off|toggle|status|get-type|set-type <Fast|Standard|Long_Life>>" >&2
+  exit 1
+}
+
+require_node() {
+  [[ -e $NODE ]] || {
+    echo "conservation mode node not found: $NODE" >&2
+    exit 1
+  }
+}
+
+charge_type() {
+  local content
+  content="$(cat "$CHARGE_TYPES_FILE" 2>/dev/null)" || return 1
+  printf '%s' "$content" | grep -oE '\[[^]]*\]' | tr -d '[]'
+}
+
+apply_type() {
+  local t="$1"
+  if [[ -e $CHARGE_TYPES_FILE ]]; then
+    printf '%s' "$t" > "$CHARGE_TYPES_FILE"
+  fi
+}
+
+case "${1:-}" in
+on)
+  require_node
+  apply_type Long_Life
+  printf '1' > "$NODE"
+  ;;
+off)
+  require_node
+  apply_type Standard
+  printf '0' > "$NODE"
+  ;;
+toggle)
+  require_node
+  current="$(cat "$NODE" 2>/dev/null)"
+  current="${current//[[:space:]]/}"
+  if [[ $current == 1 ]]; then
+    apply_type Standard
+    printf '0' > "$NODE"
+  else
+    apply_type Long_Life
+    printf '1' > "$NODE"
+  fi
+  ;;
+status)
+  require_node
+  current="$(cat "$NODE" 2>/dev/null)"
+  current="${current//[[:space:]]/}"
+  case $current in
+  1) echo on ;;
+  0) echo off ;;
+  *) echo unknown ;;
+  esac
+  ;;
+get-type)
+  [[ -e $CHARGE_TYPES_FILE ]] || {
+    echo "charge_types interface not available: $CHARGE_TYPES_FILE" >&2
+    exit 1
+  }
+  charge_type
+  ;;
+set-type)
+  case "${2:-}" in
+  Fast | Standard | Long_Life)
+    [[ -e $CHARGE_TYPES_FILE ]] || {
+      echo "charge_types interface not available: $CHARGE_TYPES_FILE" >&2
+      exit 1
+    }
+    apply_type "$2"
+    ;;
+  *)
+    usage
+    ;;
+  esac
+  ;;
+*)
+  usage
+  ;;
+esac
