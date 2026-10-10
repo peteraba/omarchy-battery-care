@@ -29,7 +29,7 @@ An Omarchy bar widget and service that picks Lenovo battery charge modes (Fast, 
 Install the plugin:
 
 ```sh
-omarchy plugin add https://github.com/pixeltux/omarchy-battery-care.git --enable
+omarchy plugin add https://github.com/PixelTux/omarchy-battery-care.git --enable
 ```
 
 and, if it was not placed in the bar automatically:
