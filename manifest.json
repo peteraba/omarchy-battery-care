@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
   "id": "pixeltux.battery",
-  "name": "My Battery",
+  "name": "Lenovo Battery Care",
   "version": "1.0.3",
   "author": "pixeltux",
+  "license": "MIT",
   "description": "Battery status icon with Lenovo charge-mode picker (Long Life stops at 80%)",
   "kinds": [
     "service",

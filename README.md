@@ -1,4 +1,4 @@
-# Battery Care
+# Lenovo Battery Care
 
 An Omarchy bar widget and service that picks Lenovo battery charge modes (Fast, Standard, Long life) and shows the active mode in its bar icon.
 
@@ -38,7 +38,7 @@ and, if it was not placed in the bar automatically:
 omarchy bar put pixeltux.battery --section right
 ```
 
-`omarchy plugin add` clones the repository's default branch (`master`), which carries the plugin at the repository root, so the clone is the whole plugin.
+`omarchy plugin add` clones the repository's default branch (`main`), which carries the plugin at the repository root, so the clone is the whole plugin.
 
 Install the root helper (the script shipped in `scripts/`, run from inside the cloned plugin directory):
 
@@ -65,17 +65,10 @@ If the widget does not appear, or does not pick up local edits, run `omarchy-res
 
 ## Repository layout
 
-- `master` (default) — development branch: the plugin sources, this README, the license, the preview image and the helper script. `omarchy plugin add` installs from here.
-- `plugin` — publish branch: the four plugin files only (`manifest.json`, `Service.qml`, `BarWidget.qml`, `BatteryModel.js`) at the repository root, with no docs. A plugin listing that expects a plugin-only repository should point at this branch.
-
-Sync the publish branch after changing plugin files on `master`:
-
-```sh
-git checkout plugin
-git checkout master -- manifest.json Service.qml BarWidget.qml BatteryModel.js
-git commit -m "Sync plugin files from master"
-git checkout master
-```
+The plugin lives at the repository root of the default branch (`main`): `manifest.json`, `Service.qml`,
+`BarWidget.qml`, `BatteryModel.js`, plus this README, the license, the preview image and the helper script
+under `scripts/`. That is what `omarchy plugin add` clones, so the clone is the whole plugin: no build step,
+no generated files.
 
 ## Usage
 
