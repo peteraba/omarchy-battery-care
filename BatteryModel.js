@@ -7,14 +7,14 @@ function isDischarging(device, onBattery, dischargingState) {
   return !!(device && device.isPresent && onBattery && device.state === dischargingState)
 }
 
-// Warns at the threshold, then again each `step` percent lower, until the
-// battery stops discharging. lastWarnedLevel is -1 when no warning is pending.
+// Warns at the threshold, then again each `step` percent lower (step 0: once),
+// until the battery stops discharging. lastWarnedLevel is -1 when no warning is pending.
 function shouldWarnLowBattery(device, onBattery, dischargingState, threshold, lastWarnedLevel, step) {
   var level = batteryPercentage(device)
   var low = level >= 0 && isDischarging(device, onBattery, dischargingState) && level <= threshold
   if (!low) return { level: level, notify: false, lastWarnedLevel: -1 }
 
-  var notify = lastWarnedLevel < 0 || level <= lastWarnedLevel - step
+  var notify = lastWarnedLevel < 0 || (step > 0 && level <= lastWarnedLevel - step)
   return { level: level, notify: notify, lastWarnedLevel: notify ? level : lastWarnedLevel }
 }
 
@@ -65,6 +65,12 @@ function parseChargeState(text) {
   return { backend: chargeModesFor(backend).length ? backend : "", batteryDir: batteryDir, chargeType: chargeType }
 }
 
+function intSetting(value, fallback, min, max) {
+  var n = parseInt(String(value), 10)
+  if (isNaN(n)) return fallback
+  return Math.min(max, Math.max(min, n))
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     batteryPercentage: batteryPercentage,
@@ -72,6 +78,7 @@ if (typeof module !== "undefined") {
     shouldWarnLowBattery: shouldWarnLowBattery,
     chargeModeIcon: chargeModeIcon,
     chargeModesFor: chargeModesFor,
-    parseChargeState: parseChargeState
+    parseChargeState: parseChargeState,
+    intSetting: intSetting
   }
 }

@@ -11,8 +11,9 @@ Item {
   property var shell: null
   property string omarchyPath: Quickshell.env("OMARCHY_PATH")
 
-  readonly property int batteryThreshold: 25
-  readonly property int batteryWarnStep: 5
+  // Set by BarWidget from its shell.json entry (lowBatteryThreshold, lowBatteryRepeatStep).
+  property int batteryThreshold: 10
+  property int batteryWarnStep: 0
   property string pendingPowerSource: ""
 
   PersistentProperties {
@@ -62,11 +63,12 @@ Item {
     onExited: if (root.pendingPowerSource !== "") root.runPendingPowerProfile()
   }
 
+  // No check on start: BarWidget's settings Bindings must land first, or a reload
+  // with a raised threshold resets lastWarnedLevel and repeats the last warning.
   Timer {
     interval: 30000
     running: true
     repeat: true
-    triggeredOnStart: true
     onTriggered: root.checkBattery()
   }
 

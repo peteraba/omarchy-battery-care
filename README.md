@@ -9,7 +9,7 @@ An Omarchy bar widget and service that picks Lenovo battery charge modes (Fast, 
 - The bar glyph follows the active charge mode: Fast `󰂄` in the theme accent, Standard `󰁹` dimmed, Long life `󱈑` (battery + heart) in the theme's green. The glyph table is `BatteryModel.chargeModeIcon`; the green is read from the active theme's `colors.toml`.
 - Left click opens the **Battery care** panel: the state line (`45% · Discharging`), the three charge-mode buttons with their hints, and charge cycles / battery health.
 - Right click toggles Long life (the 80% cap) ⇄ Standard.
-- It also carries the duties of Omarchy's built-in battery service: the low-battery notification at ≤ 10% while discharging (once per discharge, via `omarchy-battery-low`) and switching the power profile on AC changes (via `omarchy-powerprofiles-set battery|ac`).
+- It also carries the duties of Omarchy's built-in battery service: the low-battery notification at ≤ 10% while discharging (once per discharge by default, via `omarchy-battery-low`; see [Settings](#settings)) and switching the power profile on AC changes (via `omarchy-powerprofiles-set battery|ac`).
 - IPC target `pixeltux.battery` with `open`, `close` and `toggle`, e.g. for keybindings:
 
   ```sh
@@ -72,6 +72,22 @@ The plugin lives at the repository root of the default branch (`main`): `manifes
 under `scripts/`. That is what `omarchy plugin add` clones, so the clone is the whole plugin: no build step,
 no generated files.
 
+## Settings
+
+The panel's **Low battery warning** buttons pick Default (once at 10%) or Early (at 25%, then every 5%).
+They save these keys on the widget's bar entry in `~/.config/omarchy/shell.json`, which can also be edited by hand:
+
+| Key | Default | Meaning |
+|---|---|---|
+| `lowBatteryThreshold` | `10` | Battery percentage for the first low-battery warning |
+| `lowBatteryRepeatStep` | `0` | Warn again each N percent lower while discharging; `0` warns once |
+
+```json
+{ "id": "pixeltux.battery", "lowBatteryThreshold": 25, "lowBatteryRepeatStep": 5 }
+```
+
+The widget passes these to the service, so they apply only while the widget is on the bar.
+
 ## Usage
 
 | Action | Result |
@@ -79,6 +95,7 @@ no generated files.
 | Left click the bar icon | Opens the Battery care panel |
 | Right click the bar icon | Toggles the 80% cap (Long life) ⇄ Standard |
 | Panel mode buttons | Sets that charge mode (Fast / Standard / Long life) |
+| Panel warning buttons | Picks the low-battery warning (Default / Early) |
 | Hover | Tooltip describing the active mode |
 
 ## Compatibility

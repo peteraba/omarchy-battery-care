@@ -56,6 +56,40 @@ Panel {
     }
   }
 
+  readonly property int warnThreshold: BatteryModel.intSetting(root.setting("lowBatteryThreshold", 10), 10, 1, 100)
+  readonly property int warnStep: BatteryModel.intSetting(root.setting("lowBatteryRepeatStep", 0), 0, 0, 100)
+  readonly property var warnPresets: [
+    { label: "Default", hint: "Once at 10%", threshold: 10, step: 0 },
+    { label: "Early", hint: "At 25%, then every 5%", threshold: 25, step: 5 }
+  ]
+
+  // Merges into the existing entry: updateEntryInline replaces the whole entry.
+  function saveWarning(preset) {
+    var entry = { id: root.moduleName }
+    for (var k in root.settings) if (k !== "id") entry[k] = root.settings[k]
+    entry.lowBatteryThreshold = preset.threshold
+    entry.lowBatteryRepeatStep = preset.step
+    root.settings = entry
+    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
+      root.bar.shell.updateEntryInline(root.moduleName, entry)
+  }
+
+  Binding {
+    when: root.svc !== null
+    restoreMode: Binding.RestoreNone
+    target: root.svc
+    property: "batteryThreshold"
+    value: root.warnThreshold
+  }
+
+  Binding {
+    when: root.svc !== null
+    restoreMode: Binding.RestoreNone
+    target: root.svc
+    property: "batteryWarnStep"
+    value: root.warnStep
+  }
+
   visible: root.available
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -175,6 +209,51 @@ Panel {
                 bordered: true
                 active: root.chargeType === modelData.id
                 onClicked: root.svc.setChargeType(modelData.id)
+              }
+
+              Text {
+                width: parent.width
+                text: modelData.hint
+                color: Qt.darker(root.bar.foreground, 1.5)
+                font.family: root.bar.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                wrapMode: Text.Wrap
+                horizontalAlignment: Text.AlignHCenter
+              }
+            }
+          }
+        }
+
+        // ---------- Low battery warning ----------
+        PanelSectionHeader {
+          text: "LOW BATTERY WARNING"
+          foreground: root.bar.foreground
+          fontFamily: root.bar.fontFamily
+        }
+
+        Row {
+          width: parent.width
+          spacing: Style.space(8)
+
+          Repeater {
+            model: root.warnPresets
+
+            delegate: Column {
+              required property var modelData
+              width: (parent.width - parent.spacing * (root.warnPresets.length - 1)) / root.warnPresets.length
+              spacing: Style.space(6)
+
+              Button {
+                width: parent.width
+                text: modelData.label
+                fontSize: Style.font.bodySmall
+                foreground: root.bar.foreground
+                fontFamily: root.bar.fontFamily
+                horizontalPadding: Style.spacing.controlPaddingX
+                verticalPadding: Style.spacing.controlPaddingY + Style.space(2)
+                bordered: true
+                active: root.warnThreshold === modelData.threshold && root.warnStep === modelData.step
+                onClicked: root.saveWarning(modelData)
               }
 
               Text {
