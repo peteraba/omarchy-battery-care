@@ -16,3 +16,24 @@ test("no backend", () => {
   expect(parseChargeState("")).toEqual({ backend: "", batteryDir: "", chargeType: "" })
   expect(chargeModesFor("")).toEqual([])
 })
+
+test("low battery warns at 25% then every 5%, resets on charge", () => {
+  const { shouldWarnLowBattery } = require("./BatteryModel.js")
+  const DIS = 2
+  const dev = (pct, state = DIS) => ({ isPresent: true, percentage: pct / 100, state })
+  let last = -1
+  const step = (pct, onBattery = true, state = DIS) => {
+    const r = shouldWarnLowBattery(dev(pct, state), onBattery, DIS, 25, last, 5)
+    last = r.lastWarnedLevel
+    return r.notify
+  }
+  expect(step(26)).toBe(false)
+  expect(step(25)).toBe(true)
+  expect(step(23)).toBe(false)
+  expect(step(20)).toBe(true)
+  expect(step(19)).toBe(false)
+  expect(step(15)).toBe(true)
+  expect(step(15, false, 1)).toBe(false)
+  expect(last).toBe(-1)
+  expect(step(22)).toBe(true)
+})

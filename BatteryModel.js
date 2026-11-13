@@ -7,16 +7,15 @@ function isDischarging(device, onBattery, dischargingState) {
   return !!(device && device.isPresent && onBattery && device.state === dischargingState)
 }
 
-function shouldWarnLowBattery(device, onBattery, dischargingState, threshold, alreadyNotified) {
+// Warns at the threshold, then again each `step` percent lower, until the
+// battery stops discharging. lastWarnedLevel is -1 when no warning is pending.
+function shouldWarnLowBattery(device, onBattery, dischargingState, threshold, lastWarnedLevel, step) {
   var level = batteryPercentage(device)
-  if (level < 0) return { level: level, notify: false, notifiedLowBattery: false }
+  var low = level >= 0 && isDischarging(device, onBattery, dischargingState) && level <= threshold
+  if (!low) return { level: level, notify: false, lastWarnedLevel: -1 }
 
-  var low = isDischarging(device, onBattery, dischargingState) && level <= threshold
-  return {
-    level: level,
-    notify: low && !alreadyNotified,
-    notifiedLowBattery: low
-  }
+  var notify = lastWarnedLevel < 0 || level <= lastWarnedLevel - step
+  return { level: level, notify: notify, lastWarnedLevel: notify ? level : lastWarnedLevel }
 }
 
 // Charge-mode glyphs (Nerd Font / Material Design Icons; supplementary plane,

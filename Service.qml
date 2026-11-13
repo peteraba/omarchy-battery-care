@@ -11,13 +11,14 @@ Item {
   property var shell: null
   property string omarchyPath: Quickshell.env("OMARCHY_PATH")
 
-  readonly property int batteryThreshold: 10
+  readonly property int batteryThreshold: 25
+  readonly property int batteryWarnStep: 5
   property string pendingPowerSource: ""
 
   PersistentProperties {
     id: persisted
     reloadableId: "omarchy-battery"
-    property bool notifiedLowBattery: false
+    property int lastWarnedLevel: -1
   }
 
   function batteryPercentage() {
@@ -29,8 +30,8 @@ Item {
   }
 
   function checkBattery() {
-    var state = BatteryModel.shouldWarnLowBattery(UPower.displayDevice, UPower.onBattery, UPowerDeviceState.Discharging, batteryThreshold, persisted.notifiedLowBattery)
-    persisted.notifiedLowBattery = state.notifiedLowBattery
+    var state = BatteryModel.shouldWarnLowBattery(UPower.displayDevice, UPower.onBattery, UPowerDeviceState.Discharging, batteryThreshold, persisted.lastWarnedLevel, batteryWarnStep)
+    persisted.lastWarnedLevel = state.lastWarnedLevel
     if (state.notify) sendLowBatteryWarning(state.level)
   }
 
