@@ -77,17 +77,19 @@ Item {
     }
   }
 
-  // ------------------------------------------------- conservation mode
-  // Lenovo charge modes via the EC: Fast / Standard / Long_Life, where
-  // Long_Life stops charging at the fixed 80% cap (confirmed on this
-  // machine; kernel 6.17+ deprecates conservation_mode in favor of the
-  // charge_types attribute — availability is gated on charge_types only).
+  // ------------------------------------------------- charge modes
+  // Two backends, picked from the first BAT* that has one:
+  //   "types":     ideapad_acpi charge_types (Fast / Standard / Long_Life)
+  //   "threshold": thinkpad_acpi charge_control_end_threshold (80 = Long_Life)
   // Writes go through the passwordless-sudo root helper at
   // /usr/local/bin/omarchy-battery-conservation.
-  readonly property string chargeTypesFile: "/sys/class/power_supply/BAT1/charge_types"
-  readonly property string cycleCountFile: "/sys/class/power_supply/BAT1/cycle_count"
-  readonly property string energyFullFile: "/sys/class/power_supply/BAT1/energy_full"
-  readonly property string energyFullDesignFile: "/sys/class/power_supply/BAT1/energy_full_design"
+  readonly property string detectScript: "for b in /sys/class/power_supply/BAT*; do " +
+    "if [ -r \"$b/charge_types\" ]; then echo \"types $b\"; cat \"$b/charge_types\"; exit; fi; " +
+    "if [ -r \"$b/charge_control_end_threshold\" ]; then echo \"threshold $b\"; cat \"$b/charge_control_end_threshold\"; exit; fi; " +
+    "done; exit 1"
+  property string backend: ""
+  property string batteryDir: ""
+  readonly property var chargeModes: BatteryModel.chargeModesFor(backend)
   property bool conservationAvailable: false
   property string chargeType: ""
   property int cycleCount: -1
@@ -101,14 +103,14 @@ Item {
 
   function refreshConservation() {
     if (!chargeTypeProcess.running) chargeTypeProcess.running = true
-    if (root.panelOpen) {
+    if (root.panelOpen && root.batteryDir !== "") {
       if (!cycleCountProcess.running) cycleCountProcess.running = true
       if (!healthProcess.running) healthProcess.running = true
     }
   }
 
   function setChargeType(t) {
-    if (t !== "Fast" && t !== "Standard" && t !== "Long_Life") return
+    if (root.chargeModes.indexOf(t) < 0) return
     if (chargeTypeProc.running) return
     chargeTypeProc.command = ["sudo", "-n", "/usr/local/bin/omarchy-battery-conservation", "set-type", t]
     chargeTypeProc.running = true
@@ -121,12 +123,14 @@ Item {
 
   Process {
     id: chargeTypeProcess
-    command: ["cat", root.chargeTypesFile]
+    command: ["sh", "-c", root.detectScript]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
-        var m = text.match(/\[([^\]]+)\]/)
-        root.chargeType = m ? m[1] : ""
+        var state = BatteryModel.parseChargeState(text)
+        root.backend = state.backend
+        root.batteryDir = state.batteryDir
+        root.chargeType = state.chargeType
       }
     }
     onExited: function(exitCode) {
@@ -138,7 +142,7 @@ Item {
 
   Process {
     id: healthProcess
-    command: ["cat", root.energyFullFile, root.energyFullDesignFile]
+    command: ["cat", root.batteryDir + "/energy_full", root.batteryDir + "/energy_full_design"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
@@ -153,7 +157,7 @@ Item {
 
   Process {
     id: cycleCountProcess
-    command: ["cat", root.cycleCountFile]
+    command: ["cat", root.batteryDir + "/cycle_count"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {

@@ -36,11 +36,43 @@ function chargeModeIcon(chargeType) {
   return CHARGE_MODE_ICONS[String(chargeType || "")] || CHARGE_MODE_ICONS.Standard
 }
 
+// ThinkPads have no Fast mode; an 80% end threshold is the Long_Life cap.
+var LONG_LIFE_THRESHOLD = 80
+
+function chargeModesFor(backend) {
+  if (backend === "types") return ["Fast", "Standard", "Long_Life"]
+  if (backend === "threshold") return ["Standard", "Long_Life"]
+  return []
+}
+
+// Parses the Service detect script output: "<backend> <battery dir>\n<value>".
+function parseChargeState(text) {
+  var lines = String(text || "").trim().split("\n")
+  var head = lines[0] || ""
+  var space = head.indexOf(" ")
+  var backend = space > 0 ? head.slice(0, space) : ""
+  var batteryDir = space > 0 ? head.slice(space + 1) : ""
+  var value = lines[1] || ""
+  var chargeType = ""
+  if (backend === "types") {
+    var m = value.match(/\[([^\]]+)\]/)
+    chargeType = m ? m[1] : ""
+  } else if (backend === "threshold") {
+    var n = parseInt(value, 10)
+    chargeType = isNaN(n) ? "" : (n <= LONG_LIFE_THRESHOLD ? "Long_Life" : "Standard")
+  } else {
+    batteryDir = ""
+  }
+  return { backend: chargeModesFor(backend).length ? backend : "", batteryDir: batteryDir, chargeType: chargeType }
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     batteryPercentage: batteryPercentage,
     isDischarging: isDischarging,
     shouldWarnLowBattery: shouldWarnLowBattery,
-    chargeModeIcon: chargeModeIcon
+    chargeModeIcon: chargeModeIcon,
+    chargeModesFor: chargeModesFor,
+    parseChargeState: parseChargeState
   }
 }

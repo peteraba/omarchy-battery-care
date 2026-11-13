@@ -29,11 +29,14 @@ Panel {
     return root.bar.foreground
   }
 
-  readonly property var chargeModes: [
+  readonly property var allChargeModes: [
     { id: "Fast", label: "Fast", hint: "Rapid charge to 100%" },
     { id: "Standard", label: "Standard", hint: "Normal charge to 100%" },
     { id: "Long_Life", label: "Long life", hint: "Stops at 80% — best for battery lifespan" }
   ]
+  readonly property var chargeModes: allChargeModes.filter(function(m) {
+    return root.svc && root.svc.chargeModes.indexOf(m.id) >= 0
+  })
 
   readonly property bool batteryPresent: !!(UPower.displayDevice && UPower.displayDevice.isPresent)
   readonly property real batteryPercent: batteryPresent ? Math.round(UPower.displayDevice.percentage * 100) : 0
@@ -155,7 +158,7 @@ Panel {
 
             delegate: Column {
               required property var modelData
-              width: (parent.width - parent.spacing * 2) / 3
+              width: (parent.width - parent.spacing * (root.chargeModes.length - 1)) / root.chargeModes.length
               spacing: Style.space(6)
 
               Button {

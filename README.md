@@ -19,8 +19,10 @@ An Omarchy bar widget and service that picks Lenovo battery charge modes (Fast, 
 ## Requirements
 
 - Omarchy (the Quickshell shell). Plugin kinds: `service`, `bar-widget`.
-- A Lenovo laptop whose kernel exposes the `ideapad_acpi` charge-type interface: `/sys/class/power_supply/BAT1/charge_types` reporting `Fast [Standard] Long_Life`, where the bracketed entry is the active mode. Reading it needs no privileges.
-- `BAT1/cycle_count`, `BAT1/energy_full` and `BAT1/energy_full_design` for the health numbers; the panel shows `—` when they are missing.
+- A Lenovo laptop with one of these charge-mode interfaces on its first `BAT*` battery (reading needs no privileges):
+  - IdeaPad (`ideapad_acpi`): `charge_types` reporting `Fast [Standard] Long_Life`, where the bracketed entry is the active mode.
+  - ThinkPad (`thinkpad_acpi`): `charge_control_start_threshold` / `charge_control_end_threshold`. Long life sets 75/80, Standard sets 95/100. There is no Fast mode, so the panel shows two buttons.
+- `cycle_count`, `energy_full` and `energy_full_design` on that battery for the health numbers; the panel shows `—` when they are missing.
 - A root helper for switching modes (installed below) plus passwordless sudo for it.
 - A Nerd Font for the icons (Omarchy's default font resolves to a Nerd Font).
 

@@ -4,7 +4,14 @@
 # Root-owned helper invoked via passwordless sudo by the pixeltux.battery shell plugin.
 
 NODE="/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode"
-CHARGE_TYPES_FILE="/sys/class/power_supply/BAT1/charge_types"
+# First battery with a charge-mode interface: ideapad charge_types, else thinkpad thresholds.
+BACKEND=""
+BAT=""
+for b in /sys/class/power_supply/BAT*; do
+  if [[ -e $b/charge_types ]]; then BACKEND=types BAT=$b; break; fi
+  if [[ -e $b/charge_control_end_threshold ]]; then BACKEND=threshold BAT=$b; break; fi
+done
+CHARGE_TYPES_FILE="$BAT/charge_types"
 
 usage() {
   echo "Usage: ${0##*/} <on|off|toggle|status|get-type|set-type <Fast|Standard|Long_Life>>" >&2
@@ -18,7 +25,20 @@ require_node() {
   }
 }
 
+require_backend() {
+  [[ -n $BACKEND ]] || {
+    echo "no charge_types or charge_control_end_threshold under /sys/class/power_supply/BAT*" >&2
+    exit 1
+  }
+}
+
 charge_type() {
+  if [[ $BACKEND == threshold ]]; then
+    local end
+    end="$(cat "$BAT/charge_control_end_threshold")" || return 1
+    if (( end <= 80 )); then echo Long_Life; else echo Standard; fi
+    return
+  fi
   local content
   content="$(cat "$CHARGE_TYPES_FILE" 2>/dev/null)" || return 1
   printf '%s' "$content" | grep -oE '\[[^]]*\]' | tr -d '[]'
@@ -26,7 +46,24 @@ charge_type() {
 
 apply_type() {
   local t="$1"
-  if [[ -e $CHARGE_TYPES_FILE ]]; then
+  if [[ $BACKEND == threshold ]]; then
+    # Raise end to 100 first: thinkpad_acpi rejects start > end, whatever state we start from.
+    case $t in
+    Long_Life)
+      printf '100' > "$BAT/charge_control_end_threshold" &&
+        printf '75' > "$BAT/charge_control_start_threshold" &&
+        printf '80' > "$BAT/charge_control_end_threshold" || exit 1
+      ;;
+    Standard)
+      printf '100' > "$BAT/charge_control_end_threshold" &&
+        printf '95' > "$BAT/charge_control_start_threshold" || exit 1
+      ;;
+    *)
+      echo "$t is not supported on this battery" >&2
+      exit 1
+      ;;
+    esac
+  elif [[ -e $CHARGE_TYPES_FILE ]]; then
     printf '%s' "$t" > "$CHARGE_TYPES_FILE"
   fi
 }
@@ -65,19 +102,13 @@ status)
   esac
   ;;
 get-type)
-  [[ -e $CHARGE_TYPES_FILE ]] || {
-    echo "charge_types interface not available: $CHARGE_TYPES_FILE" >&2
-    exit 1
-  }
+  require_backend
   charge_type
   ;;
 set-type)
   case "${2:-}" in
   Fast | Standard | Long_Life)
-    [[ -e $CHARGE_TYPES_FILE ]] || {
-      echo "charge_types interface not available: $CHARGE_TYPES_FILE" >&2
-      exit 1
-    }
+    require_backend
     apply_type "$2"
     ;;
   *)
