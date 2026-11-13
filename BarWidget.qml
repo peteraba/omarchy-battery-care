@@ -44,6 +44,7 @@ Panel {
   readonly property string batteryState: {
     if (!batteryPresent) return ""
     if (!discharging && UPower.displayDevice.state === UPowerDeviceState.FullyCharged) return "Fully charged"
+    if (!discharging && UPower.displayDevice.state === UPowerDeviceState.PendingCharge) return "Holding"
     return discharging ? "Discharging" : "Charging"
   }
   readonly property int batteryHealth: svc ? svc.batteryHealthPct : -1
